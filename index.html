@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Bio Migration — Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       DESIGN TOKENS — Verdant UI / Compass product theme
+       ============================================================ */
+    :root {
+      /* Colors */
+      --bg-base:              #FFFFFF;
+      --bg-overlay:           rgba(255,255,255,0.8);
+      --content-primary:      #171E22;
+      --content-secondary:    #5F5E5E;
+      --content-tertiary:     #9B9A9A;
+      --border-default:       rgba(95, 94, 94, 0.16);
+      --border-interactive:   #001317;
+      --color-primary:        #0A3D35;
+      --color-primary-hover:  #0D4F43;
+      --color-primary-text:   #FFFFFF;
+      --color-neutral-bg:     #F0F0F0;
+      --color-negative:       #C0392B;
+      --color-positive-green: #00cc76;
+      --color-splash-1-bg:    #EDE9FE;
+      --color-splash-1-icon:  #7C3AED;
+      /* accent/subtle — warm beige used for textarea bg, progress tracks, chip card borders */
+      --accent-subtle:        rgba(77, 55, 11, 0.09);
+
+      /* Spacing */
+      --sp-4:   4px;   --sp-8:   8px;   --sp-12: 12px;
+      --sp-16:  16px;  --sp-20:  20px;  --sp-24: 24px;
+      --sp-32:  32px;  --sp-40:  40px;  --sp-48: 48px;
+      --sp-64:  64px;
+
+      /* Radius */
+      --r-sm: 4px;  --r-md: 8px;  --r-lg: 12px;
+      --r-xl: 16px; --r-full: 9999px;
+
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --shadow-base: 0px 1px 4px -1px rgba(31,31,31,0.04), 0px 8px 24px -10px rgba(31,31,31,0.16), inset 0 0 0 1px rgba(95,94,94,0.1);
+      --max-content: 608px;
+    }
+
+    /* ============================================================
+       RESET
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; }
+    body {
+      font-family: var(--font);
+      background: #DCDCDC;
+      color: var(--content-primary);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100svh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    @media (max-width: 767px) { body { background: var(--bg-base); } }
+
+    /* ============================================================
+       APP SHELL
+       ============================================================ */
+    #app {
+      width: 100%;
+      max-width: 1100px;
+      height: 740px;
+      margin: 32px 0;
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-base);
+      background: var(--bg-base);
+    }
+    @media (max-width: 767px) {
+      #app { max-width: 100%; height: 100svh; margin: 0; border-radius: 0; box-shadow: none; }
+    }
+
+    /* ============================================================
+       SCREEN SYSTEM
+       ============================================================ */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-base);
+      opacity: 0;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+    .screen.is-active { opacity: 1; pointer-events: auto; }
+
+    /* ============================================================
+       SHARED: TOP BAR
+       ============================================================ */
+    .top-bar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: var(--sp-8);
+      padding: var(--sp-12) var(--sp-24);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .top-bar-actions { display: flex; align-items: center; gap: var(--sp-8); margin-left: auto; }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--content-primary);
+      transition: background 0.12s;
+      flex-shrink: 0;
+    }
+    .btn-icon:hover { background: var(--color-neutral-bg); }
+    .btn-icon svg   { width: 18px; height: 18px; display: block; }
+
+    /* ============================================================
+       SHARED: PAGE FOOTER
+       ============================================================ */
+    .page-footer {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      padding: var(--sp-12) var(--sp-24);
+      flex-shrink: 0;
+      z-index: 10;
+      background: var(--bg-overlay);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .footer-row { display: flex; align-items: center; gap: var(--sp-8); width: 100%; min-height: 40px; }
+    .footer-row.end   { justify-content: flex-end; }
+    .footer-row.split { justify-content: space-between; }
+
+    /* ============================================================
+       SHARED: BUTTONS
+       ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sp-8);
+      height: 40px;
+      padding: 0 var(--sp-20);
+      border-radius: var(--r-full);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
+      cursor: pointer;
+      border: none;
+      transition: background 0.12s, opacity 0.12s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--color-primary); color: var(--color-primary-text); }
+    .btn-primary:hover { background: var(--color-primary-hover); }
+    .btn-ghost   { background: transparent; color: var(--content-primary); }
+    .btn-ghost:hover   { background: var(--color-neutral-bg); }
+    .btn-outline { background: transparent; color: var(--content-primary); border: 1.5px solid var(--border-default); }
+    .btn-outline:hover { background: var(--color-neutral-bg); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+    @media (max-width: 767px) {
+      /* Full-width primary on mobile */
+      .footer-full .btn-primary { flex: 1; }
+    }
+
+    /* ============================================================
+       SHARED: PLACEHOLDER BODY
+       ============================================================ */
+    .placeholder-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sp-12);
+      padding: var(--sp-48) var(--sp-24);
+      color: var(--content-tertiary);
+      text-align: center;
+    }
+    .placeholder-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--color-neutral-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .placeholder-icon svg { width: 24px; height: 24px; }
+    .placeholder-body h2 { font-size: 18px; font-weight: 600; color: var(--content-secondary); }
+    .placeholder-body p  { font-size: 14px; max-width: 300px; line-height: 22px; }
+
+    /* ============================================================
+       SCREEN 0: INTRO
+       ============================================================ */
+    .intro-layout {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      overflow: hidden;
+    }
+    .intro-col-headline {
+      flex: 1;
+      min-width: 0;           /* prevent flex blowout */
+      overflow: hidden;       /* clip anything that sneaks past */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-48) var(--sp-40);
+      border-right: 1px solid var(--border-default);
+    }
+    .intro-headline {
+      font-size: clamp(38px, 4vw, 52px); /* scales with viewport, never tiny or huge */
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      color: var(--content-primary);
+      text-wrap: balance;
+      max-width: 100%;        /* fill the padded column, don't hard-cap at 380 */
+    }
+    .intro-col-content {
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,0.12) transparent;
+    }
+    .intro-content-inner {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-24);
+      max-width: var(--max-content);
+      margin: 0 auto;
+      padding: var(--sp-16) var(--sp-24);
+      min-height: calc(100% - 64px);
+      justify-content: center;
+    }
+    /* Desktop-only / mobile-only top bars */
+    .intro-top-bar-desktop { display: flex; }
+    .intro-top-bar-mobile  { display: none; }
+
+    /* Mid-size desktop: tighter padding so clamp has room to work */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .intro-col-headline { padding: var(--sp-32) var(--sp-24); }
+    }
+
+    @media (max-width: 767px) {
+      .intro-top-bar-desktop { display: none; }
+      .intro-top-bar-mobile  { display: flex; }
+      .intro-layout { flex-direction: column; overflow-y: auto; }
+      .intro-col-headline { flex: none; padding: var(--sp-20) var(--sp-24) var(--sp-16); justify-content: flex-start; border-right: none; }
+      .intro-headline { font-size: 24px; line-height: 30px; letter-spacing: -0.3px; max-width: 100%; text-wrap: balance; }
+      .intro-col-content { flex: 1; overflow-y: visible; }
+      .intro-content-inner { min-height: unset; justify-content: flex-start; padding: 0 var(--sp-24) var(--sp-24); max-width: 100%; }
+    }
+
+    /* Splash icon */
+    .splash-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--r-xl);
+      background: var(--color-splash-1-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .splash-icon::after {
+      content: '';
+      position: absolute;
+      inset: -10px;
+      border-radius: 26px;
+      background: radial-gradient(ellipse at center, rgba(196,181,253,0.5) 0%, transparent 65%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .intro-text-block { display: flex; flex-direction: column; gap: var(--sp-12); }
+
+    /* Section list cards */
+    .section-list { display: flex; flex-direction: column; }
+    .section-card { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-12) var(--sp-16); border-radius: var(--r-xl); }
+    .section-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--color-neutral-bg);
+      font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 4px;
+    }
+    .section-card-text { flex: 1; min-width: 0; }
+    .section-card-name { font-size: 14px; font-weight: 500; line-height: 24px; }
+    .section-card-desc { font-size: 14px; font-weight: 400; line-height: 24px; color: var(--content-secondary); }
+    .time-badge {
+      align-self: center;
+      font-size: 12px; font-weight: 500;
+      padding: 2px 8px;
+      border-radius: var(--r-full);
+      background: var(--color-neutral-bg);
+      color: var(--content-secondary);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .body-md { font-size: 14px; line-height: 24px; font-weight: 400; }
+    .text-primary   { color: var(--content-primary); }
+    .text-secondary { color: var(--content-secondary); }
+
+    /* ============================================================
+       QUESTION SCREENS — shared layout
+       ============================================================ */
+
+    /* Scrollable area — content vertically centered on desktop */
+    .q-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,0.1) transparent;
+    }
+    .q-inner {
+      width: 100%;
+      max-width: var(--max-content);
+      margin: auto;   /* auto top/bottom = vertical centering when space allows */
+      padding: var(--sp-24);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-24);
+    }
+    @media (max-width: 767px) {
+      .q-scroll  { align-items: stretch; }
+      .q-inner   { max-width: 100%; margin: 0; padding: var(--sp-16) var(--sp-24); }
+    }
+
+    /* Page header block */
+    .q-page-hdr { display: flex; flex-direction: column; gap: var(--sp-24); width: 100%; }
+
+    .q-heading {
+      font-size: 29px;
+      font-weight: 700;
+      line-height: 36px;
+      letter-spacing: -0.5px;
+      color: var(--content-primary);
+    }
+    .q-subheading {
+      font-size: 14px;
+      color: var(--content-secondary);
+      line-height: 22px;
+      margin-top: -16px; /* collapse gap between heading and desc */
+    }
+
+    /* 3-segment progress */
+    .q-prog-segs { display: flex; gap: var(--sp-8); width: 100%; }
+    .q-prog-seg {
+      flex: 1;
+      height: 8px;
+      border-radius: var(--r-full);
+      background: var(--accent-subtle);
+      overflow: hidden;
+      position: relative;
+    }
+    .q-prog-seg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--color-primary);
+      border-radius: var(--r-full);
+      transform: translateX(-100%);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .q-prog-seg.done::after  { transform: translateX(0); }
+
+    /* Content block (textarea + chips) */
+    .q-content-block { display: flex; flex-direction: column; gap: var(--sp-24); width: 100%; }
+
+    /* ============================================================
+       TEXTAREA FIELD — with 5-state machine
+       ============================================================ */
+    .q-field { display: flex; flex-direction: column; gap: var(--sp-8); }
+
+    .q-ta-surface {
+      border-radius: var(--r-md);           /* radius/lg = 8px */
+      background: var(--accent-subtle);     /* state 1: pre-filled */
+      display: flex;
+      align-items: flex-start;
+      padding: var(--sp-12) var(--sp-8) var(--sp-12) var(--sp-16);
+      gap: var(--sp-4);
+      border: 1.5px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    /* State 3: cleared (user rejected AI pre-fill) — white + border signals clean slate */
+    .q-ta-surface[data-state="3"] {
+      background: var(--bg-base);
+      border-color: var(--border-default);
+    }
+    /* State 2: no AI suggestion — keeps beige background (matches Figma Q3 empty state) */
+    /* State 4: edited but not empty — keep beige */
+    /* (no rule needed — default accent-subtle) */
+
+    /* State 5: validation error */
+    .q-ta-surface[data-state="5"] {
+      background: var(--bg-base);
+      border-color: var(--color-negative);
+    }
+
+    .q-ta-surface textarea {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      background: transparent;
+      resize: none;
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 24px;
+      color: var(--content-primary);
+      padding: 4px 12px 8px 4px;
+      min-height: 72px;
+      outline: none;
+      overflow: hidden;
+    }
+    .q-ta-surface textarea::placeholder { color: var(--content-tertiary); }
+
+    /* Clear button (X) inside textarea top-right */
+    .q-ta-clear {
+      width: 32px;
+      min-width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.06);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .q-ta-clear:hover { background: rgba(0,0,0,0.10); }
+    .q-ta-clear svg { width: 12px; height: 12px; display: block; }
+    .q-ta-clear[hidden] { display: none; }
+
+    /* Field footer (caption + counter) */
+    .q-field-footer { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-8); }
+    .q-caption { font-size: 12px; line-height: 18px; color: var(--content-secondary); flex: 1; }
+    .q-caption a { color: var(--color-primary); font-weight: 500; cursor: pointer; text-decoration: none; }
+    .q-caption a:hover { text-decoration: underline; }
+    .q-caption.is-error { color: var(--color-negative); }
+    .q-counter { font-size: 14px; font-weight: 500; color: var(--content-secondary); white-space: nowrap; }
+    .q-counter.is-warn { color: var(--color-negative); }
+
+    /* ============================================================
+       CHIPS SURFACE
+       ============================================================ */
+    .q-chips-surface {
+      border: 1px solid var(--accent-subtle);
+      border-radius: var(--r-xl);
+      padding: var(--sp-16) var(--sp-16) var(--sp-12);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-12);
+    }
+    .q-chips-block { display: flex; flex-direction: column; gap: var(--sp-8); }
+    .q-chips-title {
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 16px;
+      color: var(--content-primary);
+    }
+    .q-chips-row { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 var(--sp-12);
+      border-radius: var(--r-full);
+      background: var(--color-neutral-bg);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--content-primary);
+      white-space: nowrap;
+    }
+
+    /* "Show current bio" text button */
+    .q-text-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--content-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.12s;
+      line-height: 24px;
+    }
+    .q-text-btn:hover { color: var(--content-primary); }
+    /* Dual icon: show (plus) / hide (minus) */
+    .q-text-btn .bio-icon-show,
+    .q-text-btn .bio-icon-hide { width: 16px; height: 16px; flex-shrink: 0; display: block; }
+    .q-text-btn .bio-icon-hide { display: none; }
+    .q-text-btn.is-open .bio-icon-show { display: none; }
+    .q-text-btn.is-open .bio-icon-hide { display: block; }
+
+    /* Bio reveal panel — closing fast, opening slow */
+    .q-bio-reveal {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      margin-top: -12px; /* absorb the gap above when closed */
+      transition: max-height 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease;
+    }
+    .q-bio-reveal.is-open {
+      max-height: 340px; opacity: 1;
+      margin-top: 0;
+      transition: max-height 0.52s cubic-bezier(0.4,0,0.2,1), opacity 0.42s ease, margin-top 0.28s ease;
+    }
+    .q-bio-reveal-inner {
+      padding-top: var(--sp-8);
+    }
+    .q-bio-text {
+      font-size: 13px;
+      line-height: 21px;
+      color: var(--content-secondary);
+    }
+
+    /* ============================================================
+       REVIEW SCREEN
+       ============================================================ */
+    .review-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,0.1) transparent;
+    }
+    .review-inner {
+      width: 100%;
+      max-width: var(--max-content);
+      margin: auto;
+      padding: var(--sp-24);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-24);
+    }
+    @media (max-width: 767px) { .review-inner { max-width: 100%; margin: 0; } }
+
+    .review-page-hdr { display: flex; flex-direction: column; gap: var(--sp-8); }
+
+    /* Profile preview card */
+    .review-card {
+      border-radius: var(--r-xl);
+      padding: var(--sp-24);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-20);
+      box-shadow: var(--shadow-base);
+    }
+
+    .review-provider-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-12);
+    }
+    .review-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--color-splash-1-bg);
+      color: var(--color-splash-1-icon);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; flex-shrink: 0;
+      letter-spacing: 0.3px;
+    }
+    .review-provider-name {
+      font-size: 21px; font-weight: 500;
+      line-height: 28px; letter-spacing: -0.2px;
+    }
+
+    .review-section {
+      display: flex; flex-direction: column; gap: var(--sp-8);
+    }
+    .review-section-hdr {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8);
+    }
+    .review-section-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.4px; text-transform: uppercase;
+      color: var(--content-primary);
+    }
+    .review-section-body {
+      font-size: 14px; line-height: 22px; color: var(--content-primary);
+      white-space: pre-wrap;
+    }
+
+    /* ============================================================
+       EDIT SHEET (mobile) / DIALOG (desktop)
+       ============================================================ */
+    .edit-overlay {
+      position: absolute; inset: 0; z-index: 200;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .edit-overlay.is-open { pointer-events: auto; opacity: 1; }
+
+    .edit-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.36);
+    }
+
+    .edit-surface {
+      position: relative;
+      background: var(--bg-base);
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+      padding: var(--sp-20) var(--sp-24) var(--sp-24);
+      display: flex; flex-direction: column; gap: var(--sp-16);
+      box-shadow: 0px -4px 32px rgba(0,0,0,0.14);
+      transform: translateY(20px);
+      transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .edit-overlay.is-open .edit-surface { transform: translateY(0); }
+
+    @media (min-width: 768px) {
+      .edit-overlay { justify-content: center; align-items: center; }
+      .edit-surface {
+        border-radius: var(--r-xl);
+        width: 100%; max-width: 480px;
+        box-shadow: 0px 8px 48px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(95,94,94,0.1);
+        transform: scale(0.96) translateY(8px);
+        transform-origin: center;
+      }
+      .edit-overlay.is-open .edit-surface { transform: scale(1) translateY(0); }
+    }
+
+    .edit-surface-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: var(--sp-12);
+    }
+    .edit-header-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+    .edit-surface-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+      text-transform: uppercase; color: var(--content-secondary);
+    }
+    .edit-surface-subq {
+      font-size: 15px; font-weight: 500; line-height: 22px;
+      color: var(--content-primary);
+    }
+
+    /* Scrollable body in edit modal */
+    .edit-body-scroll {
+      display: flex; flex-direction: column; gap: var(--sp-16);
+      overflow-y: auto; scrollbar-width: thin;
+    }
+    @media (max-width: 767px) { .edit-body-scroll { max-height: 52svh; } }
+
+    /* Edit modal textarea — reuse q-ta-surface; override min-height */
+    .edit-surface .q-ta-surface textarea { min-height: 96px; }
+
+    .edit-surface-footer { display: flex; }
+    .edit-surface-footer .btn { flex: 1; }
+
+    /* ============================================================
+       CONFIRMATION SCREEN
+       ============================================================ */
+    .confirm-scroll {
+      flex: 1; min-height: 0; overflow-y: auto;
+      display: flex; flex-direction: column; align-items: center;
+      scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.1) transparent;
+    }
+    .confirm-inner {
+      width: 100%; max-width: var(--max-content);
+      margin: auto; padding: var(--sp-24);
+      display: flex; flex-direction: column; gap: var(--sp-24);
+    }
+    @media (max-width: 767px) { .confirm-inner { max-width: 100%; margin: 0; } }
+
+    .confirm-success-stack { display: flex; flex-direction: column; gap: var(--sp-40); }
+
+    /* Plant splash icon — Splash 5 (green glow) */
+    .splash-spot-wrap {
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--sp-8) 0;
+    }
+    .splash-spot {
+      width: 88px; height: 88px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .splash-spot-glow {
+      position: absolute; inset: -16px; border-radius: 50%;
+      background: radial-gradient(ellipse at center,
+        rgba(0,204,118,0.5) 0%,
+        rgba(0,204,118,0.18) 48%,
+        transparent 72%);
+      filter: blur(10px);
+      pointer-events: none;
+    }
+    .splash-spot svg { position: relative; z-index: 1; }
+
+    /* Upsell card */
+    .upsell-card {
+      background: var(--accent-subtle);
+      border-radius: var(--r-xl);
+      padding: var(--sp-16);
+      display: flex; flex-direction: column; gap: var(--sp-24);
+    }
+    .upsell-text-block { display: flex; flex-direction: column; gap: var(--sp-8); }
+    .upsell-title {
+      font-size: 18px; font-weight: 500;
+      line-height: 28px; letter-spacing: -0.2px;
+      color: var(--content-primary);
+    }
+    .upsell-body { font-size: 14px; line-height: 24px; color: var(--content-primary); }
+
+    /* ============================================================
+       PRIMARY BUTTON — loading spinner (shared)
+       ============================================================ */
+    .btn-primary { position: relative; overflow: hidden; }
+    .btn-primary.is-loading {
+      color: transparent !important;
+      pointer-events: none;
+    }
+    .btn-primary.is-loading::after {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      top: calc(50% - 9px); left: calc(50% - 9px);
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.28);
+      border-top-color: rgba(255,255,255,0.92);
+      animation: btn-spin 0.62s linear infinite;
+    }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       REVIEW SCREEN — content stagger on enter
+       ============================================================ */
+    #screen-4 .review-page-hdr,
+    #screen-4 .review-card { opacity: 0; }
+
+    #screen-4.is-entering .review-page-hdr {
+      animation: content-rise 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.38s both;
+    }
+    #screen-4.is-entering .review-card {
+      animation: content-rise 0.54s cubic-bezier(0.22, 1, 0.36, 1) 0.54s both;
+    }
+    @keyframes content-rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       SUCCESS SCREEN — staggered entrance
+       ============================================================ */
+    #screen-5 .q-heading,
+    #screen-5 .confirm-success-stack > p,
+    #screen-5 .splash-spot-glow,
+    #screen-5 .splash-spot svg,
+    #screen-5 .upsell-card { opacity: 0; }
+
+    /* Two-stage icon: glow blooms first, then icon floats up out of it */
+
+    /* Stage 1 — glow expands from nothing */
+    #screen-5.is-entering .splash-spot-glow {
+      animation: glow-bloom 0.64s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+    }
+    /* Stage 2 — icon rises into view after glow is mostly settled */
+    #screen-5.is-entering .splash-spot svg {
+      animation: icon-emerge 0.46s cubic-bezier(0.16, 1, 0.3, 1) 0.32s both;
+    }
+
+    /* Text and card — offset from icon so they feel like a cascade */
+    #screen-5.is-entering .q-heading {
+      animation: success-rise 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.44s both;
+    }
+    #screen-5.is-entering .confirm-success-stack > p {
+      animation: success-rise 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.54s both;
+    }
+    #screen-5.is-entering .upsell-card {
+      animation: success-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.68s both;
+    }
+
+    @keyframes glow-bloom {
+      /* Expands from a tight point and fades in — like a flash dissipating */
+      from { opacity: 0; transform: scale(0.2); filter: blur(18px); }
+      to   { opacity: 1; transform: scale(1);   filter: blur(10px); }
+    }
+    @keyframes icon-emerge {
+      /* Rises up through the glow — slight vertical travel, crisp deceleration */
+      from { opacity: 0; transform: translateY(12px) scale(0.82); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    @keyframes success-rise {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Exit chip button (top bar) */
+    .btn-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 40px; padding: 0 var(--sp-16);
+      border-radius: var(--r-full); border: none;
+      background: var(--accent-subtle);
+      font-family: var(--font); font-size: 14px; font-weight: 500;
+      letter-spacing: -0.1px; color: var(--content-primary);
+      cursor: pointer; transition: background 0.12s;
+      white-space: nowrap;
+    }
+    .btn-chip:hover { background: rgba(77,55,11,0.15); }
+
+    /* ============================================================
+       PROTOTYPE NAV HELPER
+       ============================================================ */
+    #proto-nav {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      z-index: 1000;
+      background: rgba(15, 15, 15, 0.7);
+      padding: 8px 14px;
+      border-radius: 24px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .proto-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      border: none; cursor: pointer; padding: 0;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .proto-dot:hover  { background: rgba(255,255,255,0.6); transform: scale(1.2); }
+    .proto-dot.active { background: white; }
+    .proto-label {
+      font-size: 10px; font-weight: 500;
+      color: rgba(255,255,255,0.5);
+      margin-left: 6px;
+      white-space: nowrap; letter-spacing: 0.3px;
+    }
+    @media (max-width: 767px) { #proto-nav { bottom: 12px; } }
+
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- =====================================================
+       SCREEN 0 — INTRO
+       ===================================================== -->
+  <div class="screen is-active" id="screen-0">
+
+    <div class="top-bar intro-top-bar-mobile">
+      <div class="top-bar-actions">
+        <button class="btn-icon" aria-label="Close">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="intro-layout">
+      <div class="intro-col-headline">
+        <h1 class="intro-headline">Make your bio easier for clients&nbsp;to&nbsp;understand</h1>
+      </div>
+
+      <div class="intro-col-content">
+        <div class="top-bar intro-top-bar-desktop">
+          <div class="top-bar-actions">
+            <button class="btn-icon" aria-label="Close">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="intro-content-inner">
+          <div class="splash-icon">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <path d="M14 32 C14 29 16 27 22 27 C28 27 30 29 30 32 L30 36 C30 37.1 29.1 38 28 38 L16 38 C14.9 38 14 37.1 14 36 Z" fill="#C4B5FD" stroke="#7C3AED" stroke-width="1.5"/>
+              <path d="M15 33 C15 31 17 30 22 30 C27 30 29 31 29 33" stroke="#7C3AED" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M28 8 C32 6 36 9 34 15 C31 22 24 26 22 30" stroke="#7C3AED" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M28 8 C26 12 23 16 22 20" stroke="#9F75F5" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1.5 3"/>
+              <path d="M32 10 C30 13 27 16 24 19" stroke="#C4B5FD" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M33 13 C31 15 28 18 25 21" stroke="#C4B5FD" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M32 17 C30 18 27 20 25 22" stroke="#C4B5FD" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <div class="intro-text-block">
+            <p class="body-md text-primary">We've organized your bio into three short sections to make it easier for clients to understand your work. Some sections may include a starting point from your existing bio.</p>
+            <p class="body-md text-secondary">Before your updates go live, we'll review them and let you know if anything needs attention.</p>
+          </div>
+
+          <div class="section-list">
+            <div class="section-card">
+              <span class="section-num">1</span>
+              <div class="section-card-text">
+                <div class="section-card-name">Your approach</div>
+                <div class="section-card-desc">How you work with clients</div>
+              </div>
+              <span class="time-badge">2 min</span>
+            </div>
+            <div class="section-card">
+              <span class="section-num">2</span>
+              <div class="section-card-text">
+                <div class="section-card-name">Areas you specialize in</div>
+                <div class="section-card-desc">Who you work best with and what you help with</div>
+              </div>
+              <span class="time-badge">3 min</span>
+            </div>
+            <div class="section-card">
+              <span class="section-num">3</span>
+              <div class="section-card-text">
+                <div class="section-card-name">What a session with you feels like</div>
+                <div class="section-card-desc">What clients can expect in sessions</div>
+              </div>
+              <span class="time-badge">2 min</span>
+            </div>
+          </div>
+
+          <p class="body-md text-primary">You may see a draft in some sections. You can edit, rewrite, or add to each one.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <div class="footer-row end footer-full">
+        <button class="btn btn-primary" data-goto="1">Get started</button>
+      </div>
+    </div>
+
+  </div><!-- /screen-0 -->
+
+
+  <!-- =====================================================
+       SCREEN 1 — Q1: Your approach
+       ===================================================== -->
+  <div class="screen" id="screen-1">
+
+    <div class="top-bar">
+      <div class="top-bar-actions">
+        <button class="btn-icon" aria-label="Close">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="q-scroll">
+      <div class="q-inner">
+
+        <!-- Page header -->
+        <div class="q-page-hdr">
+          <h1 class="q-heading">Your approach</h1>
+          <p class="q-subheading">Describe how you work with clients in a way that's easy to understand</p>
+          <div class="q-prog-segs">
+            <!-- Q1: 0 segments done — fills happen when you advance to Q2, Q3 -->
+            <div class="q-prog-seg" id="q1-seg-1"></div>
+            <div class="q-prog-seg" id="q1-seg-2"></div>
+            <div class="q-prog-seg" id="q1-seg-3"></div>
+          </div>
+        </div>
+
+        <!-- Content block -->
+        <div class="q-content-block">
+
+          <!-- Textarea field -->
+          <div class="q-field">
+            <div class="q-ta-surface" id="q1-surface" data-state="1">
+              <textarea
+                id="q1-textarea"
+                maxlength="250"
+                aria-label="Your approach"
+                placeholder="Start with a few sentences about how you work with clients"
+              >I draw on CBT, somatic approaches, and mindfulness, adapting to what's most useful for each person.</textarea>
+              <button class="q-ta-clear" id="q1-clear" aria-label="Clear text">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                  <line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/>
+                </svg>
+              </button>
+            </div>
+            <div class="q-field-footer">
+              <span class="q-caption" id="q1-caption">Suggested from your bio. Edit or replace it.</span>
+              <span class="q-counter" id="q1-counter">100 / 250</span>
+            </div>
+          </div>
+
+          <!-- Chips / reference card -->
+          <div class="q-chips-surface">
+            <div class="q-chips-block">
+              <p class="q-chips-title">Your specialties – try explaining these in your own words</p>
+              <div class="q-chips-row">
+                <span class="chip">CBT</span>
+                <span class="chip">DBT</span>
+                <span class="chip">Mindfulness-based therapy</span>
+              </div>
+            </div>
+            <!-- Show current bio -->
+            <button class="q-text-btn" id="q1-bio-btn" type="button">
+              <svg class="bio-icon-show" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <svg class="bio-icon-hide" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <span class="bio-btn-label">Show current bio</span>
+            </button>
+            <div class="q-bio-reveal" id="q1-bio-reveal">
+              <div class="q-bio-reveal-inner">
+                <p class="q-bio-text">I'm a licensed therapist with over 10 years of experience working with adults facing anxiety, depression, and life transitions. I draw on CBT, somatic techniques, and mindfulness-based practices. My approach is collaborative — I work alongside my clients to identify patterns, build on strengths, and create meaningful, lasting change. Sessions feel structured but flexible, and I try to meet each person where they are.</p>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /q-content-block -->
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <div class="footer-row split footer-full">
+        <button class="btn btn-ghost" data-goto="0">Back</button>
+        <button class="btn btn-primary" id="q1-next">Next</button>
+      </div>
+    </div>
+
+  </div><!-- /screen-1 -->
+
+
+  <!-- =====================================================
+       SCREEN 2 — Q2: Areas you specialize in
+       ===================================================== -->
+  <div class="screen" id="screen-2">
+
+    <div class="top-bar">
+      <div class="top-bar-actions">
+        <button class="btn-icon" aria-label="Close">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="q-scroll">
+      <div class="q-inner">
+
+        <div class="q-page-hdr">
+          <h1 class="q-heading">Areas you specialize in</h1>
+          <p class="q-subheading">Think about the clients you work best with. What do they come to you for?</p>
+          <div class="q-prog-segs">
+            <div class="q-prog-seg done"></div>
+            <div class="q-prog-seg"></div>
+            <div class="q-prog-seg"></div>
+          </div>
+        </div>
+
+        <div class="q-content-block">
+
+          <div class="q-field">
+            <div class="q-ta-surface" id="q2-surface" data-state="1">
+              <textarea
+                id="q2-textarea"
+                maxlength="250"
+                aria-label="Areas you specialize in"
+                placeholder="Think about the clients you work with most — who benefits most from your approach"
+              >I support adults and couples through anxiety, burnout, life transitions, and relationship challenges.</textarea>
+              <button class="q-ta-clear" id="q2-clear" aria-label="Clear text">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                  <line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/>
+                </svg>
+              </button>
+            </div>
+            <div class="q-field-footer">
+              <span class="q-caption" id="q2-caption">Suggested from your bio. Edit or replace it.</span>
+              <span class="q-counter" id="q2-counter">100 / 250</span>
+            </div>
+          </div>
+
+          <div class="q-chips-surface">
+            <div class="q-chips-block">
+              <p class="q-chips-title">What clients come to you for — try describing these in your own words</p>
+              <div class="q-chips-row">
+                <span class="chip">Anxiety</span>
+                <span class="chip">Burnout</span>
+                <span class="chip">Couples</span>
+              </div>
+            </div>
+            <button class="q-text-btn" id="q2-bio-btn" type="button">
+              <svg class="bio-icon-show" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <svg class="bio-icon-hide" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <span class="bio-btn-label">Show current bio</span>
+            </button>
+            <div class="q-bio-reveal" id="q2-bio-reveal">
+              <div class="q-bio-reveal-inner">
+                <p class="q-bio-text">I'm a licensed therapist with over 10 years of experience working with adults facing anxiety, depression, and life transitions. I draw on CBT, somatic techniques, and mindfulness-based practices. My approach is collaborative — I work alongside my clients to identify patterns, build on strengths, and create meaningful, lasting change. Sessions feel structured but flexible, and I try to meet each person where they are.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <div class="footer-row split footer-full">
+        <button class="btn btn-ghost" data-goto="1">Back</button>
+        <button class="btn btn-primary" id="q2-next">Next</button>
+      </div>
+    </div>
+
+  </div><!-- /screen-2 -->
+
+
+  <!-- =====================================================
+       SCREEN 3 — Q3: What a session with you feels like
+       ===================================================== -->
+  <div class="screen" id="screen-3">
+
+    <div class="top-bar">
+      <div class="top-bar-actions">
+        <button class="btn-icon" aria-label="Close">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="q-scroll">
+      <div class="q-inner">
+
+        <div class="q-page-hdr">
+          <h1 class="q-heading">What a session with you feels like</h1>
+          <p class="q-subheading">Picture a client describing a session with you to a friend. What would they say?</p>
+          <div class="q-prog-segs">
+            <div class="q-prog-seg done"></div>
+            <div class="q-prog-seg done"></div>
+            <div class="q-prog-seg"></div>
+          </div>
+        </div>
+
+        <div class="q-content-block">
+
+          <!-- No AI pre-fill for Q3 — starts in state 2 -->
+          <div class="q-field">
+            <div class="q-ta-surface" id="q3-surface" data-state="2">
+              <textarea
+                id="q3-textarea"
+                maxlength="250"
+                aria-label="What a session with you feels like"
+                placeholder="Sessions often feel calm, focused, and supportive. Clients say they leave with a clearer understanding of what's going on and practical next steps..."
+              ></textarea>
+              <!-- No clear button — no AI suggestion to reject -->
+            </div>
+            <div class="q-field-footer">
+              <span class="q-caption" id="q3-caption">Start with a few sentences about what clients experience in a session with you</span>
+              <span class="q-counter" id="q3-counter">0 / 250</span>
+            </div>
+          </div>
+
+          <!-- No chips for Q3 — just a nudge + show bio -->
+          <div class="q-chips-surface">
+            <p class="q-chips-title">Not sure where to start?</p>
+            <button class="q-text-btn" id="q3-bio-btn" type="button">
+              <svg class="bio-icon-show" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <svg class="bio-icon-hide" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <span class="bio-btn-label">Show current bio</span>
+            </button>
+            <div class="q-bio-reveal" id="q3-bio-reveal">
+              <div class="q-bio-reveal-inner">
+                <p class="q-bio-text">I'm a licensed therapist with over 10 years of experience working with adults facing anxiety, depression, and life transitions. I draw on CBT, somatic techniques, and mindfulness-based practices. My approach is collaborative — I work alongside my clients to identify patterns, build on strengths, and create meaningful, lasting change. Sessions feel structured but flexible, and I try to meet each person where they are.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <div class="footer-row split footer-full">
+        <button class="btn btn-ghost" data-goto="2">Back</button>
+        <button class="btn btn-primary" id="q3-next">Review bio</button>
+      </div>
+    </div>
+
+  </div><!-- /screen-3 -->
+
+
+  <!-- =====================================================
+       SCREEN 4 — REVIEW
+       ===================================================== -->
+  <div class="screen" id="screen-4">
+
+    <div class="top-bar">
+      <div class="top-bar-actions">
+        <button class="btn-icon" aria-label="Close">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="review-scroll">
+      <div class="review-inner">
+
+        <!-- Page header -->
+        <div class="review-page-hdr">
+          <h1 class="q-heading">Review your bio</h1>
+          <p class="q-subheading" style="margin-top:0">We'll review your updates before they go live. You can still make changes before submitting.</p>
+        </div>
+
+        <!-- Profile preview card -->
+        <div class="review-card">
+
+          <!-- Provider row -->
+          <div class="review-provider-row">
+            <div class="review-avatar">TA</div>
+            <span class="review-provider-name">Tom Anderson</span>
+          </div>
+
+          <!-- Section 1: My approach -->
+          <div class="review-section">
+            <div class="review-section-hdr">
+              <span class="review-section-label">My approach</span>
+              <button class="btn-icon review-edit-btn" data-section="0" aria-label="Edit My approach">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z"/>
+                </svg>
+              </button>
+            </div>
+            <p class="review-section-body" id="review-body-0"></p>
+          </div>
+
+          <!-- Section 2: Areas I specialize in -->
+          <div class="review-section">
+            <div class="review-section-hdr">
+              <span class="review-section-label">Areas I specialize in</span>
+              <button class="btn-icon review-edit-btn" data-section="1" aria-label="Edit Areas I specialize in">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z"/>
+                </svg>
+              </button>
+            </div>
+            <p class="review-section-body" id="review-body-1"></p>
+          </div>
+
+          <!-- Section 3: What a session feels like -->
+          <div class="review-section">
+            <div class="review-section-hdr">
+              <span class="review-section-label">What a session with me feels like</span>
+              <button class="btn-icon review-edit-btn" data-section="2" aria-label="Edit What a session feels like">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z"/>
+                </svg>
+              </button>
+            </div>
+            <p class="review-section-body" id="review-body-2"></p>
+          </div>
+
+        </div><!-- /review-card -->
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <div class="footer-row end footer-full">
+        <button class="btn btn-primary" id="review-submit">Submit for review</button>
+      </div>
+    </div>
+
+    <!-- Edit sheet (mobile) / dialog (desktop) -->
+    <div id="edit-overlay" class="edit-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+      <div class="edit-backdrop" id="edit-backdrop"></div>
+      <div class="edit-surface">
+
+        <!-- Header: label + sub-question + X -->
+        <div class="edit-surface-header">
+          <div class="edit-header-text">
+            <span class="edit-surface-label" id="edit-label"></span>
+            <p class="edit-surface-subq" id="edit-subq"></p>
+          </div>
+          <button class="btn-icon" id="edit-close" aria-label="Close" style="flex-shrink:0;margin-top:-4px">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Scrollable body -->
+        <div class="edit-body-scroll">
+
+          <!-- Textarea + counter -->
+          <div class="q-field">
+            <div class="q-ta-surface" id="edit-ta-surface" data-state="1">
+              <textarea id="edit-textarea" maxlength="250" aria-label="Edit section"></textarea>
+            </div>
+            <div class="q-field-footer">
+              <span></span>
+              <span class="q-counter" id="edit-counter">0 / 250</span>
+            </div>
+          </div>
+
+          <!-- Chips + bio toggle (populated per section) -->
+          <div class="q-chips-surface" id="edit-chips-surface">
+            <div class="q-chips-block" id="edit-chips-block">
+              <p class="q-chips-title" id="edit-chips-title"></p>
+              <div class="q-chips-row" id="edit-chips-row"></div>
+            </div>
+            <button class="q-text-btn" id="edit-bio-btn" type="button">
+              <svg class="bio-icon-show" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <svg class="bio-icon-hide" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="8" x2="13" y2="8"/>
+              </svg>
+              <span class="bio-btn-label">Show current bio</span>
+            </button>
+            <div class="q-bio-reveal" id="edit-bio-reveal">
+              <div class="q-bio-reveal-inner">
+                <p class="q-bio-text" id="edit-bio-text"></p>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /edit-body-scroll -->
+
+        <div class="edit-surface-footer">
+          <button class="btn btn-primary" id="edit-save">Save</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /screen-4 -->
+
+
+  <!-- =====================================================
+       SCREEN 5 — CONFIRMATION
+       ===================================================== -->
+  <div class="screen" id="screen-5">
+
+    <div class="top-bar">
+      <div class="top-bar-actions">
+        <button class="btn-chip" data-goto="0">Exit</button>
+      </div>
+    </div>
+
+    <div class="confirm-scroll">
+      <div class="confirm-inner">
+
+        <!-- Page heading -->
+        <h1 class="q-heading">Your bio is submitted</h1>
+
+        <!-- Success content block -->
+        <div class="confirm-success-stack">
+
+          <!-- Body text -->
+          <p class="body-md text-primary">Thanks for taking the time to set this up. Your new format makes it easier for clients to understand you. We'll let you know if anything needs attention.</p>
+
+          <!-- Plant splash icon -->
+          <div class="splash-spot-wrap">
+            <div class="splash-spot">
+              <div class="splash-spot-glow"></div>
+              <svg width="52" height="60" viewBox="0 0 52 60" fill="none" stroke="#171E22" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <!-- ground line -->
+                <line x1="16" y1="54" x2="36" y2="54"/>
+                <!-- stem -->
+                <line x1="26" y1="54" x2="26" y2="12"/>
+                <!-- lower leaf pair -->
+                <path d="M26 42 C22 38 10 36 12 24 C12 24 24 28 26 42Z"/>
+                <path d="M26 42 C30 38 42 36 40 24 C40 24 28 28 26 42Z"/>
+                <!-- upper leaf pair -->
+                <path d="M26 28 C23 24 14 20 16 10 C16 10 26 14 26 28Z"/>
+                <path d="M26 28 C29 24 38 20 36 10 C36 10 26 14 26 28Z"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Upsell card -->
+          <div class="upsell-card">
+            <div class="upsell-text-block">
+              <p class="upsell-title">Add a short intro video to help more clients choose you</p>
+              <p class="upsell-body">Most providers finish in under 2 minutes — even just recording yourself saying what you wrote works great.</p>
+              <p class="upsell-body">Providers with an intro video are matched with clients 11% more often, because hearing your voice helps members feel confident before reaching out.</p>
+            </div>
+            <button class="btn btn-primary" style="width:100%">Record video</button>
+          </div>
+
+        </div><!-- /confirm-success-stack -->
+      </div>
+    </div>
+
+  </div><!-- /screen-5 -->
+
+</div><!-- /app -->
+
+<div id="proto-nav">
+  <span class="proto-label" id="proto-label">Intro</span>
+</div>
+
+<script>
+  /* ============================================================
+     NAVIGATION ENGINE
+     ============================================================ */
+  const SCREEN_COUNT = 6;
+  const SCREEN_NAMES = ['Intro', 'Your approach', 'Specialties', 'Session feel', 'Review', 'Confirmation'];
+  let current = 0;
+  let animating = false;
+  let loadingToReview = false;  // true while review button is spinning
+  let loadingToSubmit = false;  // true while submit button is spinning
+
+  const DURATION = 280;
+  const DISTANCE = 40;
+  const EASING   = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+  const getScreen = i => document.getElementById('screen-' + i);
+
+  // Per-screen animation variants
+  function getAnimConfig(toIndex, dir) {
+    if (toIndex === 4) {
+      // Review: deliberate lift — content stagger carries the weight, screen is unhurried
+      return {
+        inInit:   `opacity:0;transform:translateY(${dir > 0 ? 28 : -28}px)`,
+        inFinal:  `opacity:1;transform:translateY(0)`,
+        outFinal: `opacity:0;transform:translateY(${dir > 0 ? -10 : 10}px)`,
+        dur: 540, ease: 'cubic-bezier(0.22, 1, 0.36, 1)'
+      };
+    }
+    if (toIndex === 5) {
+      // Success: fade gives elements room to breathe before they stagger in
+      return {
+        inInit:   `opacity:0`,
+        inFinal:  `opacity:1`,
+        outFinal: `opacity:0;transform:scale(0.98)`,
+        dur: 260, ease: 'ease-out'
+      };
+    }
+    // Default: horizontal slide
+    return {
+      inInit:   `opacity:0;transform:translateX(${dir * DISTANCE}px)`,
+      inFinal:  `opacity:1;transform:translateX(0)`,
+      outFinal: `opacity:0;transform:translateX(${-dir * DISTANCE}px)`,
+      dur: DURATION, ease: EASING
+    };
+  }
+
+  function goTo(index, skipAnim) {
+    if (index === current || animating) return;
+    if (index < 0 || index >= SCREEN_COUNT) return;
+    if (loadingToReview) return;  // block nav while review button is spinning
+    if (loadingToSubmit) return;  // block nav while submit button is spinning
+
+    // Q1 validation
+    if (current === 1 && index > current) {
+      const ta = document.getElementById('q1-textarea');
+      if (!ta.value.trim()) { q1SetState(5); ta.focus(); return; }
+    }
+    // Q2 validation
+    if (current === 2 && index > current) {
+      const ta = document.getElementById('q2-textarea');
+      if (!ta.value.trim()) { q2SetState(5); ta.focus(); return; }
+    }
+    // Q3 validation
+    if (current === 3 && index > current) {
+      const ta = document.getElementById('q3-textarea');
+      if (!ta.value.trim()) { q3SetState(5); ta.focus(); return; }
+    }
+
+    animating = true;
+    const dir  = index > current ? 1 : -1;
+    const from = getScreen(current);
+    const to   = getScreen(index);
+
+    if (skipAnim) {
+      from.classList.remove('is-active');
+      from.style.cssText = '';
+      to.classList.add('is-active');
+      to.style.cssText = '';
+      current = index;
+      animating = false;
+      updateNav();
+      onScreenEnter(index);
+      return;
+    }
+
+    const anim = getAnimConfig(index, dir);
+    to.style.cssText = `${anim.inInit};transition:none;pointer-events:none;`;
+    to.offsetHeight;
+
+    requestAnimationFrame(() => {
+      from.style.cssText = `${anim.outFinal};transition:opacity ${anim.dur}ms ${anim.ease},transform ${anim.dur}ms ${anim.ease};`;
+      to.style.cssText   = `${anim.inFinal};transition:opacity ${anim.dur}ms ${anim.ease},transform ${anim.dur}ms ${anim.ease};pointer-events:auto;`;
+      to.classList.add('is-active');
+
+      setTimeout(() => {
+        from.classList.remove('is-active');
+        from.style.cssText = '';
+        to.style.cssText   = '';
+        current = index;
+        animating = false;
+        updateNav();
+        onScreenEnter(index);
+      }, anim.dur + 20);
+    });
+  }
+
+  // Build nav dots
+  const navEl    = document.getElementById('proto-nav');
+  const labelEl  = document.getElementById('proto-label');
+  for (let i = 0; i < SCREEN_COUNT; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'proto-dot' + (i === 0 ? ' active' : '');
+    dot.title = SCREEN_NAMES[i];
+    dot.dataset.i = i;
+    dot.addEventListener('click', () => goTo(Number(dot.dataset.i)));
+    navEl.insertBefore(dot, labelEl);
+  }
+  function updateNav() {
+    navEl.querySelectorAll('.proto-dot').forEach((d, i) => d.classList.toggle('active', i === current));
+    labelEl.textContent = SCREEN_NAMES[current];
+  }
+
+  // Click delegation for data-goto buttons
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-goto]');
+    if (btn) goTo(Number(btn.dataset.goto));
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA') return; // don't intercept while typing
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= SCREEN_COUNT) goTo(n - 1);
+  });
+
+  // Touch swipe
+  let touchX0 = 0;
+  const appEl = document.getElementById('app');
+  appEl.addEventListener('touchstart', e => { touchX0 = e.touches[0].clientX; }, { passive: true });
+  appEl.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - touchX0;
+    if (Math.abs(dx) > 56) goTo(dx < 0 ? current + 1 : current - 1);
+  }, { passive: true });
+
+
+  /* ============================================================
+     Q1 TEXTAREA STATE MACHINE
+     States: 1=prefilled, 2=empty(no suggestion), 3=cleared, 4=edited, 5=error
+     ============================================================ */
+  const Q1_ORIGINAL = "I draw on CBT, somatic approaches, and mindfulness, adapting to what's most useful for each person.";
+  const Q1_MAX = 250;
+
+  const q1Surface  = document.getElementById('q1-surface');
+  const q1Textarea = document.getElementById('q1-textarea');
+  const q1Clear    = document.getElementById('q1-clear');
+  const q1Caption  = document.getElementById('q1-caption');
+  const q1Counter  = document.getElementById('q1-counter');
+  const q1Next     = document.getElementById('q1-next');
+
+  let q1State = 1;
+
+  const CAPTIONS = {
+    1: 'Suggested from your bio. Edit or replace it.',
+    2: 'Start with a few sentences about how you work with clients',
+    3: '<a onclick="q1Restore()">Restore from bio</a>',
+    4: 'Keep it simple — you can refine this later.',
+    5: 'Add a few details about how you work before moving on'
+  };
+
+  function q1SetState(s) {
+    q1State = s;
+    q1Surface.dataset.state = s;
+    q1Caption.innerHTML = CAPTIONS[s];
+    q1Caption.classList.toggle('is-error', s === 5);
+    // Clear button visible in states 1 and 4
+    q1Clear.hidden = !(s === 1 || s === 4);
+  }
+
+  function q1UpdateCounter() {
+    const len = q1Textarea.value.length;
+    q1Counter.textContent = `${len} / ${Q1_MAX}`;
+    q1Counter.classList.toggle('is-warn', len > Q1_MAX * 0.9);
+  }
+
+  // Auto-resize textarea
+  function q1AutoResize() {
+    q1Textarea.style.height = 'auto';
+    q1Textarea.style.height = q1Textarea.scrollHeight + 'px';
+  }
+
+  q1Textarea.addEventListener('input', () => {
+    const val = q1Textarea.value;
+    q1UpdateCounter();
+    q1AutoResize();
+
+    if (q1State === 5 && val.trim()) {
+      // Re-enter appropriate state when user starts typing after error
+      q1SetState(val === Q1_ORIGINAL ? 1 : (val ? 4 : 3));
+      return;
+    }
+
+    if (q1State === 3 && val.trim()) {
+      q1SetState(2); // typing after clearing = fresh input
+      return;
+    }
+
+    if (q1State === 1 || q1State === 4) {
+      if (!val) {
+        q1SetState(3);
+      } else if (val !== Q1_ORIGINAL) {
+        q1SetState(4);
+      } else {
+        q1SetState(1);
+      }
+    }
+  });
+
+  // Clear button
+  q1Clear.addEventListener('click', () => {
+    q1Textarea.value = '';
+    q1UpdateCounter();
+    q1AutoResize();
+    q1SetState(3);
+    q1Textarea.focus();
+  });
+
+  // Next button — handled via goTo() with validation above
+  q1Next.addEventListener('click', () => goTo(2));
+
+  // Restore from bio link
+  function q1Restore() {
+    q1Textarea.value = Q1_ORIGINAL;
+    q1UpdateCounter();
+    q1AutoResize();
+    q1SetState(1);
+    q1Textarea.focus();
+  }
+
+  // Show/hide current bio
+  document.getElementById('q1-bio-btn').addEventListener('click', function() {
+    const reveal = document.getElementById('q1-bio-reveal');
+    const isOpen = reveal.classList.toggle('is-open');
+    this.classList.toggle('is-open', isOpen);
+    this.querySelector('.bio-btn-label').textContent = isOpen ? 'Hide current bio' : 'Show current bio';
+  });
+
+  // Initialize
+  q1UpdateCounter();
+  q1AutoResize();
+
+
+  /* ============================================================
+     Q2 TEXTAREA STATE MACHINE
+     ============================================================ */
+  const Q2_ORIGINAL = "I support adults and couples through anxiety, burnout, life transitions, and relationship challenges.";
+  const Q2_MAX = 250;
+
+  const q2Surface  = document.getElementById('q2-surface');
+  const q2Textarea = document.getElementById('q2-textarea');
+  const q2Clear    = document.getElementById('q2-clear');
+  const q2Caption  = document.getElementById('q2-caption');
+  const q2Counter  = document.getElementById('q2-counter');
+  const q2Next     = document.getElementById('q2-next');
+
+  let q2State = 1;
+
+  const Q2_CAPTIONS = {
+    1: 'Suggested from your bio. Edit or replace it.',
+    2: 'Think about the clients you work with most — who benefits most from your approach',
+    3: '<a onclick="q2Restore()">Restore from bio</a>',
+    4: 'Keep it simple — you can refine this later.',
+    5: 'Add a few details about who you work with before moving on'
+  };
+
+  function q2SetState(s) {
+    q2State = s;
+    q2Surface.dataset.state = s;
+    q2Caption.innerHTML = Q2_CAPTIONS[s];
+    q2Caption.classList.toggle('is-error', s === 5);
+    q2Clear.hidden = !(s === 1 || s === 4);
+  }
+
+  function q2UpdateCounter() {
+    const len = q2Textarea.value.length;
+    q2Counter.textContent = `${len} / ${Q2_MAX}`;
+    q2Counter.classList.toggle('is-warn', len > Q2_MAX * 0.9);
+  }
+
+  function q2AutoResize() {
+    q2Textarea.style.height = 'auto';
+    q2Textarea.style.height = q2Textarea.scrollHeight + 'px';
+  }
+
+  q2Textarea.addEventListener('input', () => {
+    const val = q2Textarea.value;
+    q2UpdateCounter();
+    q2AutoResize();
+
+    if (q2State === 5 && val.trim()) {
+      q2SetState(val === Q2_ORIGINAL ? 1 : (val ? 4 : 3));
+      return;
+    }
+    if (q2State === 3 && val.trim()) { q2SetState(2); return; }
+    if (q2State === 1 || q2State === 4) {
+      if (!val)                   q2SetState(3);
+      else if (val !== Q2_ORIGINAL) q2SetState(4);
+      else                          q2SetState(1);
+    }
+  });
+
+  q2Clear.addEventListener('click', () => {
+    q2Textarea.value = '';
+    q2UpdateCounter();
+    q2AutoResize();
+    q2SetState(3);
+    q2Textarea.focus();
+  });
+
+  q2Next.addEventListener('click', () => goTo(3));
+
+  function q2Restore() {
+    q2Textarea.value = Q2_ORIGINAL;
+    q2UpdateCounter();
+    q2AutoResize();
+    q2SetState(1);
+    q2Textarea.focus();
+  }
+
+  document.getElementById('q2-bio-btn').addEventListener('click', function() {
+    const reveal = document.getElementById('q2-bio-reveal');
+    const isOpen = reveal.classList.toggle('is-open');
+    this.classList.toggle('is-open', isOpen);
+    this.querySelector('.bio-btn-label').textContent = isOpen ? 'Hide current bio' : 'Show current bio';
+  });
+
+  q2UpdateCounter();
+  q2AutoResize();
+
+
+  /* ============================================================
+     Q3 TEXTAREA STATE MACHINE
+     No AI pre-fill — only states 2 (empty prompt) and 5 (error)
+     ============================================================ */
+  const Q3_MAX = 250;
+
+  const q3Surface  = document.getElementById('q3-surface');
+  const q3Textarea = document.getElementById('q3-textarea');
+  const q3Caption  = document.getElementById('q3-caption');
+  const q3Counter  = document.getElementById('q3-counter');
+  const q3Next     = document.getElementById('q3-next');
+
+  let q3State = 2;
+
+  const Q3_CAPTIONS = {
+    2: 'Start with a few sentences about what clients experience in a session with you',
+    5: 'Add a few details about what sessions are like before moving on'
+  };
+
+  function q3SetState(s) {
+    q3State = s;
+    q3Surface.dataset.state = s;
+    q3Caption.textContent = Q3_CAPTIONS[s];
+    q3Caption.classList.toggle('is-error', s === 5);
+  }
+
+  function q3UpdateCounter() {
+    const len = q3Textarea.value.length;
+    q3Counter.textContent = `${len} / ${Q3_MAX}`;
+    q3Counter.classList.toggle('is-warn', len > Q3_MAX * 0.9);
+  }
+
+  function q3AutoResize() {
+    q3Textarea.style.height = 'auto';
+    q3Textarea.style.height = q3Textarea.scrollHeight + 'px';
+  }
+
+  q3Textarea.addEventListener('input', () => {
+    q3UpdateCounter();
+    q3AutoResize();
+    if (q3State === 5 && q3Textarea.value.trim()) q3SetState(2);
+  });
+
+  q3Next.addEventListener('click', () => {
+    // validate first (mirrors goTo's check, but we need it before the delay)
+    if (!q3Textarea.value.trim()) { q3SetState(5); q3Textarea.focus(); return; }
+    if (loadingToReview) return;
+    loadingToReview = true;
+    q3Next.classList.add('is-loading');
+    setTimeout(() => {
+      q3Next.classList.remove('is-loading');
+      loadingToReview = false;
+      goTo(4);
+    }, 900);
+  });
+
+  document.getElementById('q3-bio-btn').addEventListener('click', function() {
+    const reveal = document.getElementById('q3-bio-reveal');
+    const isOpen = reveal.classList.toggle('is-open');
+    this.classList.toggle('is-open', isOpen);
+    this.querySelector('.bio-btn-label').textContent = isOpen ? 'Hide current bio' : 'Show current bio';
+  });
+
+  q3UpdateCounter();
+  q3AutoResize();
+
+
+  /* ============================================================
+     SCREEN ENTER HOOKS
+     ============================================================ */
+  function triggerEntrance(screenId) {
+    const el = document.getElementById(screenId);
+    el.classList.remove('is-entering');
+    void el.offsetWidth; // force reflow so animation replays
+    el.classList.add('is-entering');
+  }
+
+  function onScreenEnter(index) {
+    if (index === 4) {
+      populateReview();
+      triggerEntrance('screen-4');
+    }
+    if (index === 5) {
+      // Ensure submit button isn't stuck in loading state
+      document.getElementById('review-submit').classList.remove('is-loading');
+      loadingToSubmit = false;
+      triggerEntrance('screen-5');
+    }
+  }
+
+
+  /* ============================================================
+     REVIEW SCREEN
+     ============================================================ */
+  const REVIEW_SOURCE_IDS = ['q1-textarea', 'q2-textarea', 'q3-textarea'];
+
+  // Per-section data for the edit modal
+  const SECTION_DATA = [
+    {
+      label: 'My approach',
+      subq: 'Describe how you work with clients in a way that\'s easy to understand',
+      chips: ['CBT', 'DBT', 'Mindfulness-based therapy'],
+      chipsTitle: 'Your specialties – try explaining these in your own words'
+    },
+    {
+      label: 'Areas I specialize in',
+      subq: 'Think about the clients you work best with. What do they come to you for?',
+      chips: ['Anxiety', 'Burnout', 'Couples'],
+      chipsTitle: 'What clients come to you for — try describing these in your own words'
+    },
+    {
+      label: 'What a session with me feels like',
+      subq: 'Picture a client describing a session with you to a friend. What would they say?',
+      chips: [],
+      chipsTitle: ''
+    }
+  ];
+  const BIO_TEXT = "I'm a licensed therapist with over 10 years of experience working with adults facing anxiety, depression, and life transitions. I draw on CBT, somatic techniques, and mindfulness-based practices. My approach is collaborative — I work alongside my clients to identify patterns, build on strengths, and create meaningful, lasting change. Sessions feel structured but flexible, and I try to meet each person where they are.";
+
+  function populateReview() {
+    REVIEW_SOURCE_IDS.forEach((id, i) => {
+      document.getElementById('review-body-' + i).textContent = document.getElementById(id).value;
+    });
+  }
+
+  // Edit overlay
+  const editOverlay  = document.getElementById('edit-overlay');
+  const editTa       = document.getElementById('edit-textarea');
+  const editBackdrop = document.getElementById('edit-backdrop');
+  let editingSection = -1;
+
+  function updateEditCounter() {
+    const el = document.getElementById('edit-counter');
+    if (el) el.textContent = `${editTa.value.length} / 250`;
+  }
+
+  function openEdit(sectionIndex) {
+    const sec = SECTION_DATA[sectionIndex];
+    editingSection = sectionIndex;
+
+    // Header
+    document.getElementById('edit-label').textContent = sec.label;
+    document.getElementById('edit-subq').textContent  = sec.subq;
+
+    // Textarea
+    editTa.value = document.getElementById('review-body-' + sectionIndex).textContent;
+    editTa.style.height = 'auto';
+    editTa.style.height = editTa.scrollHeight + 'px';
+    updateEditCounter();
+
+    // Chips
+    const chipsBlock = document.getElementById('edit-chips-block');
+    chipsBlock.style.display = sec.chips.length ? '' : 'none';
+    if (sec.chips.length) {
+      document.getElementById('edit-chips-title').textContent = sec.chipsTitle;
+      document.getElementById('edit-chips-row').innerHTML =
+        sec.chips.map(c => `<span class="chip">${c}</span>`).join('');
+    }
+
+    // Bio text + reset reveal
+    document.getElementById('edit-bio-text').textContent = BIO_TEXT;
+    const editBioReveal = document.getElementById('edit-bio-reveal');
+    const editBioBtn    = document.getElementById('edit-bio-btn');
+    editBioReveal.classList.remove('is-open');
+    editBioBtn.classList.remove('is-open');
+    editBioBtn.querySelector('.bio-btn-label').textContent = 'Show current bio';
+
+    editOverlay.classList.add('is-open');
+    editOverlay.setAttribute('aria-hidden', 'false');
+    setTimeout(() => editTa.focus(), 60);
+  }
+
+  function closeEdit() {
+    editOverlay.classList.remove('is-open');
+    editOverlay.setAttribute('aria-hidden', 'true');
+    editingSection = -1;
+  }
+
+  function saveEdit() {
+    if (editingSection < 0) return;
+    if (!editTa.value.trim()) return;
+    document.getElementById('review-body-' + editingSection).textContent = editTa.value;
+    document.getElementById(REVIEW_SOURCE_IDS[editingSection]).value = editTa.value;
+    closeEdit();
+  }
+
+  // Wire edit buttons
+  document.querySelectorAll('.review-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEdit(Number(btn.dataset.section)));
+  });
+
+  document.getElementById('edit-close').addEventListener('click', closeEdit);
+  document.getElementById('edit-save').addEventListener('click', saveEdit);
+  editBackdrop.addEventListener('click', closeEdit);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && editOverlay.classList.contains('is-open')) closeEdit();
+  });
+
+  editTa.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+    updateEditCounter();
+  });
+
+  // Edit modal bio toggle
+  document.getElementById('edit-bio-btn').addEventListener('click', function() {
+    const reveal = document.getElementById('edit-bio-reveal');
+    const isOpen = reveal.classList.toggle('is-open');
+    this.classList.toggle('is-open', isOpen);
+    this.querySelector('.bio-btn-label').textContent = isOpen ? 'Hide current bio' : 'Show current bio';
+  });
+
+  // Submit for review → confirmation (spinner delay for anticipation)
+  document.getElementById('review-submit').addEventListener('click', () => {
+    if (loadingToSubmit) return;
+    loadingToSubmit = true;
+    const btn = document.getElementById('review-submit');
+    btn.classList.add('is-loading');
+    setTimeout(() => {
+      btn.classList.remove('is-loading');
+      loadingToSubmit = false;
+      goTo(5);
+    }, 700);
+  });
+</script>
+
+</body>
+</html>
