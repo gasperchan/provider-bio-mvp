@@ -21,6 +21,8 @@ Without intent, engineers optimize for correctness and miss feel. This doc inclu
 
 ## Easing reference
 
+> **Update note:** An earlier iteration used a rightward panel-slide (`translateX(80px → 0)`) for the dashboard-to-flow transition. This was replaced with a cross-dissolve + vertical rise (§6) after review — the panel movement felt like a lateral navigation gesture rather than entering a focused mode.
+
 | Name | Curve | Character |
 |---|---|---|
 | Default slide | `cubic-bezier(0.4, 0, 0.2, 1)` | Material standard — neutral, directional |
@@ -250,6 +252,103 @@ function goTo(index) {
   // ...
 }
 ```
+
+---
+
+## 6. Dashboard ↔ flow transitions
+
+The bio migration flow is a full-page experience launched from the Compass dashboard. The two directions (open and close) are intentionally asymmetric — opening is softer, closing is faster.
+
+### 6a. Opening: dashboard → flow
+
+**Trigger:** "Update bio" tap on the recommendation card
+
+| Element | Keyframe / transition | Duration | Delay | Easing |
+|---|---|---|---|---|
+| `#dashboard` | `dash-exit`: `opacity: 1 → 0` | 320ms | 0 | `ease-out` |
+| `#app` | `flow-enter`: `opacity: 0 → 1`, `translateY(20px → 0)` | 380ms | 120ms | `cubic-bezier(0.25, 0.46, 0.45, 0.94)` |
+
+The 120ms delay on `#app` means the dashboard is already ~37% faded before the flow begins rising in. This avoids both elements competing for attention at the same instant.
+
+**Why cross-dissolve, not a slide:**  
+A lateral slide (e.g. `translateX`) reads as spatial navigation — moving to a sibling page. A vertical rise reads as "going deeper" — entering a focused mode. The flow is not a peer of the dashboard; it's a task launched from it. The direction of movement should reflect that hierarchy.
+
+**CSS:**
+```css
+#dashboard.is-exiting {
+  animation: dash-exit 0.32s ease-out both;
+  pointer-events: none;
+}
+@keyframes dash-exit { to { opacity: 0; } }
+
+#app.flow-entering {
+  animation: flow-enter 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.12s both;
+}
+@keyframes flow-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+```
+
+**JS sequence:**
+```javascript
+function openFlow() {
+  dashboard.classList.add('is-exiting');
+  app.classList.remove('pre-panel');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    app.classList.add('flow-entering');
+  }));
+  setTimeout(() => {
+    dashboard.classList.add('is-hidden');
+    app.classList.remove('flow-entering');
+  }, 560);
+}
+```
+
+The double `requestAnimationFrame` ensures the browser has painted the `pre-panel` removal (opacity: 0) before the `flow-entering` animation class is added — without it, the `from` keyframe may be skipped.
+
+---
+
+### 6b. Closing: flow → dashboard
+
+**Trigger:** X button in any screen's top bar, or "Exit" chip on the success screen. Both use the `.js-flow-close` class; a delegated listener on `document` handles all of them.
+
+| Element | Keyframe / transition | Duration | Delay | Easing |
+|---|---|---|---|---|
+| `#app` | `flow-exit`: `opacity: 1 → 0`, `translateY(0 → 12px)` | 260ms | 0 | `ease-in` |
+| `#dashboard` | `dash-return`: `opacity: 0 → 1` | 360ms | 280ms (after flow finishes) | `cubic-bezier(0.25, 0.46, 0.45, 0.94)` |
+
+The flow exits down (opposite of how it entered up), then the dashboard fades back in cleanly. The flow also resets to screen 0 silently (`goTo(0, true)`) so the next entry starts fresh.
+
+**Why `ease-in` for the exit:**  
+Objects that are leaving should accelerate out of frame, not decelerate into it. `ease-in` reads as intentional departure. `ease-out` on the same motion would feel like the screen is reluctantly being dragged away.
+
+**CSS:**
+```css
+#app.flow-exiting {
+  animation: flow-exit 0.26s ease-in both;
+  pointer-events: none;
+}
+@keyframes flow-exit { to { opacity: 0; transform: translateY(12px); } }
+
+#dashboard.is-returning {
+  animation: dash-return 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes dash-return {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+```
+
+---
+
+## 7. Entry point — pre-flow state
+
+Before the flow is opened, `#app` sits in the DOM at `opacity: 0; pointer-events: none` (`.pre-panel` class). It is fully rendered but invisible behind `#dashboard`. This avoids a flash of the flow when the page loads and ensures the `flow-enter` animation has a consistent starting state.
+
+The `#dashboard` sits at `z-index: 200`, above `#app`, so the invisible `#app` is never accidentally visible even without the opacity rule.
+
+---
 
 ### Sheet → dialog rule (not yet animated, for reference)
 On `base`/`sm`: edit surfaces are bottom sheets. On `md`+: they become dialogs. When this is implemented, sheet entrance should be `translateY(100% → 0)` with the same asymmetric timing as the bio reveal. Dialog entrance should be `scale(0.96 → 1) + opacity(0 → 1)` — the scale difference is smaller because dialogs are centered, not anchored to an edge.
