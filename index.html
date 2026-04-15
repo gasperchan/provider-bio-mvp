@@ -53,32 +53,21 @@
     html { font-size: 14px; }
     body {
       font-family: var(--font);
-      background: #DCDCDC;
+      background: var(--bg-base);
       color: var(--content-primary);
       -webkit-font-smoothing: antialiased;
       min-height: 100svh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
     }
-    @media (max-width: 767px) { body { background: var(--bg-base); } }
 
     /* ============================================================
-       APP SHELL
+       APP SHELL — full page, not a card
        ============================================================ */
     #app {
       width: 100%;
-      max-width: 1100px;
-      height: 740px;
-      margin: 32px 0;
+      height: 100svh;
       position: relative;
-      border-radius: 16px;
       overflow: hidden;
-      box-shadow: var(--shadow-base);
       background: var(--bg-base);
-    }
-    @media (max-width: 767px) {
-      #app { max-width: 100%; height: 100svh; margin: 0; border-radius: 0; box-shadow: none; }
     }
 
     /* ============================================================
@@ -251,9 +240,7 @@
       min-height: calc(100% - 64px);
       justify-content: center;
     }
-    /* Desktop-only / mobile-only top bars */
-    .intro-top-bar-desktop { display: flex; }
-    .intro-top-bar-mobile  { display: none; }
+    /* (intro top bars merged into single .top-bar) */
 
     /* Mid-size desktop: tighter padding so clamp has room to work */
     @media (min-width: 768px) and (max-width: 1023px) {
@@ -261,8 +248,6 @@
     }
 
     @media (max-width: 767px) {
-      .intro-top-bar-desktop { display: none; }
-      .intro-top-bar-mobile  { display: flex; }
       .intro-layout { flex-direction: column; overflow-y: auto; }
       .intro-col-headline { flex: none; padding: var(--sp-20) var(--sp-24) var(--sp-16); justify-content: flex-start; border-right: none; background: none; }
       .intro-headline { font-size: 24px; line-height: 30px; letter-spacing: -0.3px; max-width: 100%; text-wrap: balance; }
@@ -830,6 +815,57 @@
     .btn-chip:hover { background: rgba(77,55,11,0.15); }
 
     /* ============================================================
+       PASSWORD GATE
+       ============================================================ */
+    #password-gate {
+      position: fixed; inset: 0;
+      background: #EDEAE3;
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--sp-24);
+    }
+    #password-gate.is-hidden { display: none; }
+    .pw-card {
+      background: #FFF;
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: 24px;
+      box-shadow: 0 2px 8px rgba(72,45,40,0.06), 0 12px 40px -8px rgba(72,45,40,0.14);
+    }
+    .pw-header { display: flex; flex-direction: column; gap: 6px; }
+    .pw-logo {
+      width: 36px; height: 36px; background: #0A3D35;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 4px;
+    }
+    .pw-title { font-size: 21px; font-weight: 600; letter-spacing: -0.2px; color: #171E22; }
+    .pw-sub { font-size: 14px; color: #556065; line-height: 20px; }
+    .pw-form { display: flex; flex-direction: column; gap: 12px; }
+    .pw-input {
+      width: 100%; height: 48px;
+      background: #FBFAF9; border: 1.5px solid #EFEDE8;
+      border-radius: 10px; padding: 0 16px;
+      font-size: 15px; font-family: var(--font); color: #171E22;
+      outline: none; transition: border-color 0.15s;
+    }
+    .pw-input:focus { border-color: var(--color-primary); }
+    .pw-input.is-error { border-color: #C44848; animation: pw-shake 0.32s ease; }
+    @keyframes pw-shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      60%      { transform: translateX(6px); }
+    }
+    .pw-error { font-size: 13px; color: #C44848; min-height: 18px; }
+    .pw-submit {
+      height: 48px; background: var(--color-primary); color: #FFF;
+      border: none; border-radius: 10px; font-size: 15px;
+      font-weight: 600; font-family: var(--font); cursor: pointer;
+      transition: background 0.12s;
+    }
+    .pw-submit:hover { background: var(--color-primary-hover); }
+
+    /* ============================================================
        DASHBOARD — Compass home entrypoint
        ============================================================ */
     #dashboard {
@@ -837,38 +873,13 @@
       background: #EDEAE3;
       z-index: 200;
       display: flex;
-      flex-direction: column;
       overflow: hidden;
       font-family: var(--font);
     }
     #dashboard.is-hidden { display: none; }
 
-    /* Browser chrome simulation */
-    .dash-browser-bar {
-      height: 40px;
-      background: #EDEAE3;
-      border-bottom: 1px solid #E0DDD6;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-    .dash-browser-dots { display: flex; gap: 6px; }
-    .dash-browser-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dash-browser-dot:nth-child(1) { background: #FF5F57; }
-    .dash-browser-dot:nth-child(2) { background: #FEBC2E; }
-    .dash-browser-dot:nth-child(3) { background: #28C840; }
-    .dash-url-bar {
-      flex: 1; max-width: 280px; height: 22px;
-      background: rgba(0,0,0,0.07); border-radius: 5px;
-      margin: 0 auto;
-      display: flex; align-items: center; padding: 0 10px;
-    }
-    .dash-url-text { font-size: 11px; color: #888; letter-spacing: -0.1px; }
-
-    /* Viewport below browser bar */
-    .dash-viewport { flex: 1; display: flex; min-height: 0; }
+    /* Viewport = full dashboard */
+    .dash-viewport { flex: 1; display: flex; min-height: 0; width: 100%; }
 
     /* Left nav */
     .dash-nav {
@@ -889,11 +900,25 @@
     .dash-nav-item svg { opacity: 0.45; }
     .dash-nav-item.is-active svg { opacity: 0.9; }
 
+    /* Centered content wrapper (main + sidebar) */
+    .dash-content-wrap {
+      flex: 1; min-width: 0;
+      display: flex;
+      overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.1) transparent;
+    }
+    .dash-content-inner {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      min-height: min-content;
+    }
+
     /* Main scroll area */
     .dash-main {
-      flex: 1; min-width: 0; overflow-y: auto;
+      flex: 1; min-width: 0;
       padding: 0 0 32px 0;
-      scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.1) transparent;
     }
     .dash-main-inner {
       padding: 20px 16px 0 24px;
@@ -979,41 +1004,50 @@
     }
     .rec-card-cta:hover { color: #068262; }
 
-    /* ---- Dashboard ↔ panel transitions ---- */
+    /* ---- Dashboard ↔ flow transitions ---- */
 
-    /* Before flow starts: app is offset right, invisible */
-    #app.pre-panel { transform: translateX(80px); opacity: 0; }
+    /* Before flow starts: invisible */
+    #app.pre-panel { opacity: 0; pointer-events: none; }
 
-    /* Dashboard exits left */
+    /* Dashboard fades out */
     #dashboard.is-exiting {
-      animation: dash-exit 0.52s cubic-bezier(0.4, 0, 0.2, 1) both;
+      animation: dash-exit 0.32s ease-out both;
       pointer-events: none;
     }
     @keyframes dash-exit {
-      to { opacity: 0; transform: translateX(-48px) scale(0.97); }
+      to { opacity: 0; }
     }
 
-    /* App panel enters from right */
-    #app.panel-entering {
-      animation: panel-enter 0.56s cubic-bezier(0.22, 1, 0.36, 1) both;
+    /* Flow fades + rises in */
+    #app.flow-entering {
+      animation: flow-enter 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.12s both;
     }
-    @keyframes panel-enter {
-      from { opacity: 0; transform: translateX(80px); }
-      to   { opacity: 1; transform: translateX(0); }
+    @keyframes flow-enter {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Mobile: no sidebar, vertical slide */
+    /* Flow exits back to dashboard */
+    #app.flow-exiting {
+      animation: flow-exit 0.26s ease-in both;
+      pointer-events: none;
+    }
+    @keyframes flow-exit {
+      to { opacity: 0; transform: translateY(12px); }
+    }
+
+    /* Dashboard re-enters when flow is closed */
+    #dashboard.is-returning {
+      animation: dash-return 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    @keyframes dash-return {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
     @media (max-width: 767px) {
-      .dash-browser-bar { display: none; }
       .dash-sidebar { display: none; }
       .dash-main-inner { padding: 16px; }
-      @keyframes dash-exit {
-        to { opacity: 0; transform: translateY(-16px) scale(0.98); }
-      }
-      @keyframes panel-enter {
-        from { opacity: 0; transform: translateY(32px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
     }
 
     /* ============================================================
@@ -1055,21 +1089,31 @@
 <body>
 
 <!-- ============================================================
+     PASSWORD GATE
+     ============================================================ -->
+<div id="password-gate">
+  <div class="pw-card">
+    <div class="pw-header">
+      <div class="pw-logo">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 3C10 3 6 5.5 6 10C6 13 8 15 10 15.5C12 15 14 13 14 10C14 6 10 3 10 3Z" fill="white" opacity="0.9"/>
+        </svg>
+      </div>
+      <div class="pw-title">Provider Bio — Prototype</div>
+      <div class="pw-sub">Enter the password to continue.</div>
+    </div>
+    <form class="pw-form" id="pw-form">
+      <input class="pw-input" id="pw-input" type="password" placeholder="Password" autocomplete="current-password"/>
+      <div class="pw-error" id="pw-error"></div>
+      <button class="pw-submit" type="submit">Continue</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
      DASHBOARD — Compass home (entrypoint layer)
      ============================================================ -->
 <div id="dashboard">
-
-  <!-- Browser chrome -->
-  <div class="dash-browser-bar">
-    <div class="dash-browser-dots">
-      <div class="dash-browser-dot"></div>
-      <div class="dash-browser-dot"></div>
-      <div class="dash-browser-dot"></div>
-    </div>
-    <div class="dash-url-bar">
-      <span class="dash-url-text">compass.springhealth.com</span>
-    </div>
-  </div>
 
   <div class="dash-viewport">
 
@@ -1101,6 +1145,9 @@
         </svg>
       </div>
     </nav>
+
+    <div class="dash-content-wrap">
+    <div class="dash-content-inner">
 
     <!-- Main content -->
     <div class="dash-main">
@@ -1210,6 +1257,9 @@
 
     </div><!-- /dash-sidebar -->
 
+    </div><!-- /dash-content-inner -->
+    </div><!-- /dash-content-wrap -->
+
   </div><!-- /dash-viewport -->
 </div><!-- /dashboard -->
 
@@ -1220,9 +1270,9 @@
        ===================================================== -->
   <div class="screen is-active" id="screen-0">
 
-    <div class="top-bar intro-top-bar-mobile">
+    <div class="top-bar">
       <div class="top-bar-actions">
-        <button class="btn-icon" aria-label="Close">
+        <button class="btn-icon js-flow-close" aria-label="Close">
           <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
           </svg>
@@ -1236,16 +1286,6 @@
       </div>
 
       <div class="intro-col-content">
-        <div class="top-bar intro-top-bar-desktop">
-          <div class="top-bar-actions">
-            <button class="btn-icon" aria-label="Close">
-              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                <line x1="4.5" y1="4.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="4.5" x2="4.5" y2="13.5"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-
         <div class="intro-content-inner">
           <div class="splash-icon">
             <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
@@ -1783,35 +1823,74 @@
 
 <script>
   /* ============================================================
-     DASHBOARD → PANEL ENTRY ANIMATION
+     PASSWORD GATE
+     ============================================================ */
+  document.getElementById('pw-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = document.getElementById('pw-input');
+    const error = document.getElementById('pw-error');
+    if (input.value === 'foobarbazz') {
+      const gate = document.getElementById('password-gate');
+      gate.style.transition = 'opacity 0.28s ease';
+      gate.style.opacity = '0';
+      setTimeout(() => gate.classList.add('is-hidden'), 300);
+    } else {
+      error.textContent = 'Incorrect password.';
+      input.classList.remove('is-error');
+      void input.offsetWidth; // replay shake
+      input.classList.add('is-error');
+      input.value = '';
+      input.focus();
+    }
+  });
+
+  /* ============================================================
+     DASHBOARD ↔ FLOW TRANSITIONS
      ============================================================ */
   const dashboard = document.getElementById('dashboard');
   const protoNav  = document.getElementById('proto-nav');
 
-  // Proto nav is hidden while dashboard is showing
+  // Proto nav hidden until flow opens
   protoNav.style.display = 'none';
 
-  document.getElementById('update-bio-btn').addEventListener('click', () => {
+  function openFlow() {
     const app = document.getElementById('app');
-
-    // 1. Mark dashboard for exit
     dashboard.classList.add('is-exiting');
-
-    // 2. Switch app from pre-panel → panel-entering
-    //    Two rAFs ensure the browser registers the class removal before animating
     app.classList.remove('pre-panel');
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        app.classList.add('panel-entering');
-      });
-    });
-
-    // 3. After animation settles: hide dashboard, clean up classes, show proto-nav
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      app.classList.add('flow-entering');
+    }));
     setTimeout(() => {
       dashboard.classList.add('is-hidden');
-      app.classList.remove('panel-entering');
+      app.classList.remove('flow-entering');
       protoNav.style.display = '';
-    }, 580);
+    }, 560);
+  }
+
+  function closeFlow() {
+    const app = document.getElementById('app');
+    app.classList.add('flow-exiting');
+    protoNav.style.display = 'none';
+
+    // Reset flow back to screen 0
+    // (goTo is defined later — we call it after the animation settles)
+    setTimeout(() => {
+      // Restore dashboard
+      dashboard.classList.remove('is-hidden', 'is-exiting');
+      dashboard.classList.add('is-returning');
+      // Reset app to hidden/initial state and go to screen 0
+      app.classList.remove('flow-exiting');
+      app.classList.add('pre-panel');
+      goTo(0, true); // skipAnim — instant reset
+      setTimeout(() => dashboard.classList.remove('is-returning'), 400);
+    }, 280);
+  }
+
+  document.getElementById('update-bio-btn').addEventListener('click', openFlow);
+
+  // X buttons in the flow — delegate via class
+  document.addEventListener('click', e => {
+    if (e.target.closest('.js-flow-close')) closeFlow();
   });
 
   /* ============================================================
