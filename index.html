@@ -99,6 +99,12 @@
     }
     .top-bar-actions { display: flex; align-items: center; gap: var(--sp-8); margin-left: auto; }
 
+    /* X close chip in top bar — always filled, matches Figma icon button spec */
+    .top-bar .btn-icon {
+      background: var(--accent-subtle);
+    }
+    .top-bar .btn-icon:hover { background: rgba(77,55,11,0.15); }
+
     .btn-icon {
       width: 36px;
       height: 36px;
@@ -215,8 +221,8 @@
     .intro-headline {
       font-size: clamp(38px, 4vw, 52px); /* scales with viewport, never tiny or huge */
       font-weight: 700;
-      line-height: 1.1;
-      letter-spacing: -1px;
+      line-height: 1.0;
+      letter-spacing: -1.5px;
       color: var(--content-primary);
       text-wrap: balance;
       max-width: 100%;        /* fill the padded column, don't hard-cap at 380 */
