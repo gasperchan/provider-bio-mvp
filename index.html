@@ -371,45 +371,26 @@
       inset: 0;
       background: var(--color-primary);
       border-radius: var(--r-full);
-      transform: translateX(-100%);
+      transform: translateX(calc(-100% - 4px)); /* extra 4px clears the pill-radius bleed */
     }
     .q-prog-seg.done::after  { transform: translateX(0); }
 
-    /* Forward fill — spring snap */
+    /* Forward fill */
     .q-prog-seg.is-filling::after {
-      animation: seg-fill 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      animation: seg-fill 0.22s ease-out both;
     }
     @keyframes seg-fill {
-      from { transform: translateX(-100%); }
+      from { transform: translateX(calc(-100% - 4px)); }
       to   { transform: translateX(0); }
     }
 
-    /* Backward clear — quick ease-in */
+    /* Backward clear — same duration and easing as forward */
     .q-prog-seg.is-clearing::after {
-      animation: seg-clear 0.18s ease-in both;
+      animation: seg-clear 0.22s ease-out both;
     }
     @keyframes seg-clear {
       from { transform: translateX(0); }
-      to   { transform: translateX(-100%); }
-    }
-
-    /* Active segment shimmer */
-    .q-prog-seg.is-active { overflow: hidden; }
-    .q-prog-seg.is-active::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: var(--r-full);
-      background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(10, 61, 53, 0.18) 50%,
-        transparent 100%
-      );
-      animation: seg-shimmer 1.8s ease-in-out infinite;
-    }
-    @keyframes seg-shimmer {
-      0%   { transform: translateX(-200%); }
-      100% { transform: translateX(200%); }
+      to   { transform: translateX(calc(-100% - 4px)); }
     }
 
     /* Content block (textarea + chips) */
@@ -2014,6 +1995,7 @@
       current = index;
       animating = false;
       updateNav();
+      animateProgress(index, prevSkip);
       onScreenEnter(index, prevSkip);
       return;
     }
@@ -2022,10 +2004,14 @@
     to.style.cssText = `${anim.inInit};transition:none;pointer-events:none;`;
     to.offsetHeight;
 
+    const prevForAnim = current;
     requestAnimationFrame(() => {
       from.style.cssText = `${anim.outFinal};transition:opacity ${anim.dur}ms ${anim.ease},transform ${anim.dur}ms ${anim.ease};`;
       to.style.cssText   = `${anim.inFinal};transition:opacity ${anim.dur}ms ${anim.ease},transform ${anim.dur}ms ${anim.ease};pointer-events:auto;`;
       to.classList.add('is-active');
+
+      // Fire progress animation with the screen transition, not after it
+      animateProgress(index, prevForAnim);
 
       setTimeout(() => {
         from.classList.remove('is-active');
@@ -2366,24 +2352,24 @@
 
       if (i < completedCount) {
         if (dir === 'fwd' && i === completedCount - 1) {
-          // Newly completed segment — spring fill
+          // Newly completed segment — fill animation
           seg.classList.add('is-filling');
           setTimeout(() => {
             seg.classList.remove('is-filling');
             seg.classList.add('done');
-          }, 540);
+          }, 230);
         } else {
           // Already done — appear immediately
           seg.classList.add('done');
         }
       } else if (i === activeIdx) {
-        if (dir === 'back' && fromIndex > 1 && i > 0) {
-          // Segment just un-completed — sweep out first, then shimmer
+        if (dir === 'back') {
+          // Segment becoming un-completed — sweep out
           seg.classList.add('is-clearing');
           setTimeout(() => {
             seg.classList.remove('is-clearing');
             seg.classList.add('is-active');
-          }, 200);
+          }, 230);
         } else {
           seg.classList.add('is-active');
         }
@@ -2393,9 +2379,6 @@
   }
 
   function onScreenEnter(index, prev) {
-    if (index >= 1 && index <= 3) {
-      animateProgress(index, prev !== undefined ? prev : index - 1);
-    }
     if (index === 4) {
       populateReview();
       triggerEntrance('screen-4');

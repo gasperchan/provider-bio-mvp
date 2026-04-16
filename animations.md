@@ -350,5 +350,70 @@ The `#dashboard` sits at `z-index: 200`, above `#app`, so the invisible `#app` i
 
 ---
 
+## 8. Stepper progress bar (Q1–Q3)
+
+**Trigger:** Any "Next" or "Back" navigation between question screens (screens 1–3)
+
+**Structure:** 3 equal-width pill segments, each with an `::after` pseudo-element that slides in or out. Segments are independent — each screen owns its own set of 3 nodes. `animateProgress` is called once per navigation, targeting the destination screen's segments.
+
+**State machine per segment:**
+
+| Class | Visual state | When applied |
+|---|---|---|
+| *(none)* | Empty — future step | Segments after the active one |
+| `.is-active` | Empty — current step | The in-progress segment |
+| `.done` | Filled, static | Segments before the active one |
+| `.is-filling` | Filling animation playing | The segment just completed (forward only) |
+| `.is-clearing` | Clearing animation playing | The segment just un-completed (backward only) |
+
+**Forward fill:**
+
+| Property | Start | End | Duration | Easing |
+|---|---|---|---|---|
+| `translateX` on `::after` | `calc(-100% - 4px)` | `0` | 220ms | `ease-out` |
+
+Only the *newly completed* segment plays `is-filling`. Already-completed segments appear instantly as `done`.
+
+**Backward clear:**
+
+| Property | Start | End | Duration | Easing |
+|---|---|---|---|---|
+| `translateX` on `::after` | `0` | `calc(-100% - 4px)` | 220ms | `ease-out` |
+
+The *newly un-completed* segment plays `is-clearing`, including segment 0 (Q2→Q1). `animation-fill-mode: both` ensures the bar always starts visually filled before sweeping out — even if the segment's prior DOM state was already empty.
+
+**Trigger timing:** `animateProgress` fires inside the same `requestAnimationFrame` as the screen transition — not in the `setTimeout` that fires after. The bar and the screen move together. An earlier implementation called it after `anim.dur + 20ms`, which made the bar lag the slide by a full transition duration.
+
+**Hidden-state offset:** The resting `translateX` is `calc(-100% - 4px)` rather than `-100%`. With `overflow: hidden` and `border-radius: 9999px` on both parent and child, a pure `-100%` offset leaves the pill's right edge exactly at the parent's clip boundary — the rounded clip allows a sub-pixel sliver to bleed through. The extra 4px (matching the effective border-radius on the 8px-tall track) clears the clip zone completely.
+
+**CSS:**
+```css
+.q-prog-seg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary);
+  border-radius: var(--r-full);
+  transform: translateX(calc(-100% - 4px));
+}
+.q-prog-seg.done::after { transform: translateX(0); }
+
+.q-prog-seg.is-filling::after  { animation: seg-fill  0.22s ease-out both; }
+.q-prog-seg.is-clearing::after { animation: seg-clear 0.22s ease-out both; }
+
+@keyframes seg-fill  {
+  from { transform: translateX(calc(-100% - 4px)); }
+  to   { transform: translateX(0); }
+}
+@keyframes seg-clear {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-100% - 4px)); }
+}
+```
+
+**Reduced motion:** Not yet implemented. When added, remove both transitions and apply `.done` / base state instantly.
+
+---
+
 ### Sheet → dialog rule (not yet animated, for reference)
 On `base`/`sm`: edit surfaces are bottom sheets. On `md`+: they become dialogs. When this is implemented, sheet entrance should be `translateY(100% → 0)` with the same asymmetric timing as the bio reveal. Dialog entrance should be `scale(0.96 → 1) + opacity(0 → 1)` — the scale difference is smaller because dialogs are centered, not anchored to an edge.
