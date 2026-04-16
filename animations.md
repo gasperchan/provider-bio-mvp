@@ -60,15 +60,22 @@ Without intent, engineers optimize for correctness and miss feel. This doc inclu
 
 ### 2a. Button loading state
 
-Before the screen transition, the "Review bio" button enters a loading state for 900ms. This is intentional pre-transition anticipation — it signals that something real is happening (data being saved) and creates tension that makes the subsequent reveal feel earned.
+The total window before transitioning to Review is 900ms, split into two sequential stages:
+
+| Window | What happens |
+|---|---|
+| 0–230ms | Q3 stepper's third segment fills (see §8) |
+| 230–900ms | `#q3-next` enters `.is-loading` (spinner visible, label hidden) |
+| 900ms | `.is-loading` removed, `goTo(4)` fires |
+
+The fill and spinner are deliberately **not** simultaneous. The fill is user-side feedback ("step complete"); the spinner is system-side feedback ("processing"). Running them together collapses that distinction and competes for attention. Sequencing them — fill settles, then spinner starts — keeps one focal point at a time and preserves the semantic order: you finished before the system responds.
 
 | Element | State | Duration |
 |---|---|---|
-| `#q3-next` | `.is-loading` added | 900ms |
+| Q3 third segment | `is-filling` → `done` | 220ms, starting at 0ms |
+| `#q3-next` | `.is-loading` added | Starting at 230ms |
 | Button label | Hidden via `color: transparent` | — |
 | Spinner (`::after`) | Rotating border-top | `0.62s linear infinite` |
-
-After 900ms: `.is-loading` is removed, `goTo(4)` fires.
 
 ### 2b. Screen container
 
@@ -373,6 +380,8 @@ The `#dashboard` sits at `z-index: 200`, above `#app`, so the invisible `#app` i
 | `translateX` on `::after` | `calc(-100% - 4px)` | `0` | 220ms | `ease-out` |
 
 Only the *newly completed* segment plays `is-filling`. Already-completed segments appear instantly as `done`.
+
+**Q3 exception — fill on button tap, not screen transition:** `animateProgress` returns early for `toIndex > 3` (Review is screen 4), so Q3's third segment would never fill via the normal path. Instead it is triggered manually on "Review bio" tap — at `t=0`, before the loading spinner starts at `t=230ms`. See §2a for the full sequence.
 
 **Backward clear:**
 
