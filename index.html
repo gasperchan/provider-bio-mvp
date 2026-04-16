@@ -2436,6 +2436,14 @@
     if (loadingToReview) return;
     loadingToReview = true;
     q3Next.classList.add('is-loading');
+
+    // Fill the third stepper segment on click — animateProgress skips toIndex>3
+    const lastSeg = document.querySelector('#screen-3 .q-prog-seg:last-child');
+    lastSeg.classList.remove('done', 'is-filling', 'is-clearing', 'is-active');
+    void lastSeg.offsetWidth;
+    lastSeg.classList.add('is-filling');
+    setTimeout(() => { lastSeg.classList.remove('is-filling'); lastSeg.classList.add('done'); }, 230);
+
     setTimeout(() => {
       q3Next.classList.remove('is-loading');
       loadingToReview = false;

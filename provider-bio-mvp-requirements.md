@@ -90,7 +90,15 @@ Shown immediately after the provider taps the entry CTA. AI extraction runs here
 
 ## 4. Question flow
 
-Three questions, one screen each. Progress bar at top uses **section name** as the label, not a countdown ("My approach", not "1 of 3") — avoids loss-aversion pressure at the final step (D-05).
+Three questions, one screen each.
+
+**Progress bar:** 3 equal-width pill segments at the top of each question screen. Segments fill as the provider advances:
+- Q1: 0 segments filled (first is current)
+- Q2: 1 filled, second is current
+- Q3: 2 filled, third is current — the third segment fills immediately when "Review bio" is tapped, during the button's loading state, before the screen transitions to Review
+- Navigating back animates the filled segment clearing
+
+Note: earlier spec called for section-name text labels on the progress bar (D-05). The prototype uses visual segments instead — the section name appears as the H1 heading on each screen, so the bar functions as a positional indicator only.
 
 Questions:
 1. **My approach** — how you work, what guides your sessions
@@ -180,7 +188,26 @@ Presents all 3 completed sections before saving. Because all fields are required
 
 ---
 
-## 6. Confirmation screen
+## 6. Exit behavior
+
+An X button appears in the top-right corner of every screen in the flow.
+
+| Screen | Behavior |
+|---|---|
+| Intro (screen 0) | Closes immediately, returns to dashboard |
+| Q1–Q3, Review (screens 1–4) | Shows confirmation modal before closing |
+| Confirmation / success (screen 5) | Closes immediately via "Exit" chip |
+
+**Confirmation modal (screens 1–4):**
+- Title: "Exit without saving?"
+- Body: "Your progress won't be saved. You'll need to start over next time."
+- Actions: "No, go back" (dismisses modal) / "Yes, exit" (closes flow, returns to dashboard)
+- Tapping the backdrop also dismisses the modal
+- Flow resets to Intro on close so the next entry starts fresh
+
+---
+
+## 8. Confirmation screen
 
 - Checkmark icon
 - Headline: "Bio saved"
