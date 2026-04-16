@@ -2435,14 +2435,14 @@
     if (!q3Textarea.value.trim()) { q3SetState(5); q3Textarea.focus(); return; }
     if (loadingToReview) return;
     loadingToReview = true;
-    q3Next.classList.add('is-loading');
 
-    // Fill the third stepper segment on click — animateProgress skips toIndex>3
+    // Sequence: fill completes first (0–230ms), spinner starts after (230–900ms)
     const lastSeg = document.querySelector('#screen-3 .q-prog-seg:last-child');
     lastSeg.classList.remove('done', 'is-filling', 'is-clearing', 'is-active');
     void lastSeg.offsetWidth;
     lastSeg.classList.add('is-filling');
     setTimeout(() => { lastSeg.classList.remove('is-filling'); lastSeg.classList.add('done'); }, 230);
+    setTimeout(() => { q3Next.classList.add('is-loading'); }, 230);
 
     setTimeout(() => {
       q3Next.classList.remove('is-loading');
